@@ -1,27 +1,11 @@
 import type { NextPage } from "next";
 import { useEffect, useState } from "react";
+import { getCartById } from "../src/GetCartById";
+import { GetCartByIdQuery } from "../src/types";
 
 function useCart(id: string) {
   const [cart, setCart] = useState();
-  const query = `
-	query GetCartById($id: ID!) {
-		cart(id: $id) {
-			totalItems
-			subTotal {
-				amount
-				formatted
-			}
-			items {
-				id
-				name
-				quantity
-				unitTotal {
-					formatted
-				}
-			}
-		}
-	}
-`;
+  const query = getCartById;
 
   const variables = {
     id,
@@ -43,12 +27,11 @@ function useCart(id: string) {
       });
   }, [body, setCart]);
 
-  return cart;
+  return cart as unknown as GetCartByIdQuery["cart"];
 }
 
 const Home: NextPage = () => {
   const cart = useCart("ck5r8d5b500003f5o2aif0v2b");
-  // @ts-ignore
   return <div>Total items: {cart?.totalItems}</div>;
 };
 

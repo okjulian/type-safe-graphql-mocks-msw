@@ -116,3 +116,63 @@ describe("Home", () => {
 ```
 
 10. `yarn test`
+11. `yarn add graphql`
+12. `yarn add -D @graphql-codegen/cli`
+13. `yarn add @graphql-codegen/typescript @graphql-codegen/typescript-operations -D`
+14. `src/GetCartById.ts`
+
+```ts
+const gql = String;
+
+export const getCartById = gql`
+  query GetCartById($id: ID!) {
+    cart(id: $id) {
+      totalItems
+      subTotal {
+        amount
+        formatted
+      }
+      items {
+        id
+        name
+        quantity
+        unitTotal {
+          formatted
+        }
+      }
+    }
+  }
+`;
+```
+
+15. Replace `query` with imported `getCartById` in `pages/index.tsx`
+
+```tsx
+import type { NextPage } from "next";
+import { useEffect, useState } from "react";
+import { getCartById } from "../src/GetCartById";
+
+function useCart(id: string) {
+  const [cart, setCart] = useState();
+  const query = getCartById;
+  // ...
+}
+
+// ...
+```
+
+16. `codegen.yml`
+
+```yml
+schema: https://api.cartql.com
+documents: ./src/**/*.ts
+generates:
+  ./src/types.ts:
+    plugins:
+      - typescript
+      - typescript-operations
+```
+
+17. Add `"codegen": "graphql-codegen"` to `scripts` in `package.json`
+18. `yarn codegen` creates `src/types.ts`
+19. Add type to result of `pages/index.tsx` `useCart`: `return cart as unknown as GetCartByIdQuery["cart"];`. Remove `@ts-ignore` when accessing `cart?.totalItems`
