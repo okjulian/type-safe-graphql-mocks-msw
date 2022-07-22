@@ -212,3 +212,35 @@ generates:
 19. Add `"codegen": "graphql-codegen"` to `scripts` in `package.json`
 20. `yarn codegen` creates `src/types.ts`
 21. Add type to result of `pages/index.tsx` `useCart`: `return cart as unknown as GetCartByIdQuery["cart"];`. Remove `@ts-ignore` when accessing `cart?.totalItems`
+22. `__tests__/index.test.tsx`
+
+```tsx
+import { render, screen, waitFor } from "@testing-library/react";
+import Home from "../pages/index";
+import { graphql } from "msw";
+import { setupServer } from "msw/node";
+import { GetCartByIdQuery } from "../src/types";
+
+const server = setupServer(
+  graphql.query<GetCartByIdQuery>("GetCartById", (req, res, ctx) => {
+    return res(
+      ctx.data({
+        cart: {
+          totalItems: 10,
+          subTotal: { amount: 20000, formatted: "£200.00" },
+          items: [
+            {
+              id: "5e3293a3462051",
+              name: "Full Logo Tee",
+              quantity: 10,
+              unitTotal: { formatted: "£20.00" },
+            },
+          ],
+        },
+      })
+    );
+  })
+);
+
+// ...
+```
