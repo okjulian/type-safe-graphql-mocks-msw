@@ -1,5 +1,15 @@
 # Type safe GraphQL mocks with MSW and GraphQL Codegen
 
+## What is it?
+
+Example showing how to add type safety to MSW GraphQL mocks in Jest
+
+## What's the purpose?
+
+More confidence in your tests. By adding type safety to your GraphQL mocks, they will match the shape of the GraphQL queries. You won't worry about incorrect mocks in your tests. They are also easier to write, since Typescript will guide you on what's missing in your fake data.
+
+## Steps
+
 1. `yarn create next-app --typescript type-safe-graphql-mocks-msw`
 2. `cd type-safe-graphql-mocks-msw`
 3. `yarn dev`
