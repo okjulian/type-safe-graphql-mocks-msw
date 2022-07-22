@@ -10,9 +10,12 @@ More confidence in your tests. By adding type safety to your GraphQL mocks, they
 
 ## Steps
 
+### Display cart items
+
 1. `yarn create next-app --typescript type-safe-graphql-mocks-msw`
 2. `cd type-safe-graphql-mocks-msw`
 3. `yarn dev`
+
 4. Display total items in `pages/index.tsx`
 
 ```tsx
@@ -73,6 +76,8 @@ const Home: NextPage = () => {
 export default Home;
 ```
 
+### Test cart items page
+
 5. `yarn add @testing-library/jest-dom @testing-library/react @testing-library/user-event jest jest-environment-jsdom whatwg-fetch -D`
 6. `jest.config.js`
 
@@ -126,6 +131,9 @@ describe("Home", () => {
 ```
 
 10. `yarn test`
+
+### Mock GraphQL query inside test using MSW
+
 11. `yarn add msw --dev`
 12. Mock GraphQL query in `__tests__/index.test.tsx`
 
@@ -161,6 +169,8 @@ describe("Home", () => {
   });
 });
 ```
+
+### Type safe query using GraphQL Codegen
 
 13. `yarn add graphql`
 14. `yarn add -D @graphql-codegen/cli`
@@ -221,7 +231,10 @@ generates:
 
 19. Add `"codegen": "graphql-codegen"` to `scripts` in `package.json`
 20. `yarn codegen` creates `src/types.ts`
-21. Add type to result of `pages/index.tsx` `useCart`: `return cart as unknown as GetCartByIdQuery["cart"];`. Remove `@ts-ignore` when accessing `cart?.totalItems`
+21. Add type to result of `useCart` inside `pages/index.tsx`: `return cart as unknown as GetCartByIdQuery["cart"];`. Remove `@ts-ignore` when accessing `cart?.totalItems`
+
+### Add types to mock inside test
+
 22. `__tests__/index.test.tsx`
 
 ```tsx
