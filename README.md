@@ -1,54 +1,84 @@
-# Type safe GraphQL mocks with MSW and GraphQL Codegen
+# How to write type safe mocks with MSW and GraphQL Codegen
 
-## What is it?
+## Introduction
 
-Example showing how to add type safety to MSW GraphQL mocks in Jest
+In this guide, you will set up tests that mock GraphQL responses in a type-safe way using NextJS, Jest, MSW and GraphQL Codegen.
 
-## What's the purpose?
+When you're finished, you'll be able to have more confidence in your tests thanks to a typed mocking layer. By adding type safety to your GraphQL mocks, they will match the shape of the GraphQL queries. You won't worry about incorrect mocks in your tests. They will also be easier to write, since Typescript will guide you on what's missing in your fake data.
 
-More confidence in your tests. By adding type safety to your GraphQL mocks, they will match the shape of the GraphQL queries. You won't worry about incorrect mocks in your tests. They are also easier to write, since Typescript will guide you on what's missing in your fake data.
+## Prerequisites
 
-## Steps
+- [React](https://reactjs.org/) for components
+- [NextJs](https://nextjs.org/) as a full-stack framework
+- [GraphQL](https://graphql.org/) for the API layer
+- [Typescript](https://www.typescriptlang.org/) for type checking
+- [GraphQL Codegen](https://www.graphql-code-generator.com/) for type generation
+- [Jest](https://jestjs.io/) for unit tests
+- [MSW](https://mswjs.io/) for mocks
 
-### Display cart items
+## Step 1 - Displaying cart items
 
-1. `yarn create next-app --typescript type-safe-graphql-mocks-msw`
-2. `cd type-safe-graphql-mocks-msw`
-3. `yarn dev`
+In this step you're going to display cart items in the browser. To do this, you will setup a NextJs application and fetch cart items from a GraphQL API.
 
-4. Display total items in `pages/index.tsx`
+First, bootstrap a new NextJs and Typescript application.
 
-```tsx
-import type { NextPage } from "next";
-import { useEffect, useState } from "react";
+```sh
+yarn create next-app --typescript type-safe-graphql-mocks-msw
+```
 
-function useCart(id: string) {
-  const [cart, setCart] = useState();
-  const query = `
-	query GetCartById($id: ID!) {
-		cart(id: $id) {
-			totalItems
-			subTotal {
-				amount
-				formatted
-			}
-			items {
-				id
-				name
-				quantity
-				unitTotal {
-					formatted
-				}
-			}
-		}
-	}
+The last argument specifies the folder where the application will be created.
+
+Now go to the created folder and start the app in development mode.
+
+```sh
+cd type-safe-graphql-mocks-msw
+yarn dev
+```
+
+You'll see the page running in [http://localhost:3000](http://localhost:3000).
+
+Next, create a top level folder and name it `src`. This is where our components and helpers will be located.
+
+Now create a file inside `src` called `GetCartById.ts`. Export a string containing a query to fetch a cart by id from [https://cartql.com](https://cartql.com).
+
+```ts
+export const getCartById = `
+  query GetCartById($id: ID!) {
+    cart(id: $id) {
+      totalItems
+      subTotal {
+        amount
+        formatted
+      }
+      items {
+        id
+        name
+        quantity
+        unitTotal {
+          formatted
+        }
+      }
+    }
+  }
 `;
+```
+
+Next you're going to define a new React hook to fetch the cart. Create a new file inside `src` and name it `useCart.ts`.
+
+It exports a function called `useCart` that receives an `id` and returns a `cart`, `null` or `undefined`.
+
+```ts
+import { useEffect, useState } from "react";
+import { getCartById } from "./GetCartById";
+
+export function useCart(id: string) {
+  const [cart, setCart] = useState();
 
   const variables = {
     id,
   };
 
-  const body = JSON.stringify({ query, variables });
+  const body = JSON.stringify({ query: getCartById, variables });
 
   useEffect(() => {
     fetch("https://api.cartql.com", {
@@ -66,6 +96,15 @@ function useCart(id: string) {
 
   return cart;
 }
+```
+
+Notice that to communicate with the GraphQL API, it uses a simple `fetch` call that sends a query and some variables. Depending on the needs of your application, you would use more elaborate ways of communicating with your API such as [React Query](https://tanstack.com/query/v4/), [Apollo Client](https://www.apollographql.com/docs/react/) or others.
+
+Finally, display the total items in `pages/index.tsx`:
+
+```tsx
+import type { NextPage } from "next";
+import { useCart } from "../src/useCart";
 
 const Home: NextPage = () => {
   const cart = useCart("ck5r8d5b500003f5o2aif0v2b");
@@ -76,10 +115,21 @@ const Home: NextPage = () => {
 export default Home;
 ```
 
-### Test cart items page
+Don't freak out about that last `// @ts-ignore`, you will fix that once you add types for the GraphQL API.
 
-5. `yarn add @testing-library/jest-dom @testing-library/react @testing-library/user-event jest jest-environment-jsdom whatwg-fetch -D`
-6. `jest.config.js`
+In this step, you setup a simple NextJs application that fetches a cart by id. Next step is creating a unit test that verifies this page correctly displays the total items.
+
+## Step 2 - Testing cart items page
+
+In this step you're going to setup Jest to test NextJs pages, and then write a test to verify the functionality of the cart page.
+
+First install Jest, React testing library and a fetch library that works on the testing environment.
+
+```bash
+yarn add @testing-library/jest-dom @testing-library/react @testing-library/user-event jest jest-environment-jsdom whatwg-fetch -D
+```
+
+Next, define Jest configuration by creating a file called `jest.config.js` and add the following:
 
 ```js
 const nextJest = require("next/jest");
@@ -100,20 +150,20 @@ const customJestConfig = {
 module.exports = createJestConfig(customJestConfig);
 ```
 
-7. `jest.setup.js`
+Create another file called `jest.setup.js` that sets up both React Testing Library and a fetch replacement for the test environment.
 
 ```js
-// Optional: configure or set up a testing framework before each test.
-// If you delete this file, remove `setupFilesAfterEnv` from `jest.config.js`
-
-// Used for __tests__/testing-library.js
-// Learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom/extend-expect";
 import "whatwg-fetch";
 ```
 
-8. Add `"test": "jest --watchAll"` to `scripts` in `package.json`
-9. Create `__tests__/index.test.tsx`
+To finish setting up testing, add a new command to `package.json` called `test` that calls `jest --watchAll`.
+
+Now that tests are set up, you can write a test to verify the functionality of the cart page.
+
+Create a folder called `__tests__` and add a new test called `index.test.tsx`.
+
+This test will render the cart page and verify it displays `Total items:`.
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -130,14 +180,51 @@ describe("Home", () => {
 });
 ```
 
-10. `yarn test`
+Run the test to verify it passes.
 
-### Mock GraphQL query inside test using MSW
+```bash
+yarn test
+```
 
-11. `yarn add msw --dev`
-12. Mock GraphQL query in `__tests__/index.test.tsx`
+Notice that the component this test rendered sends an HTTP request to the GraphQL API right after it renders. In the next step you are going to mock this interaction using a library called [MSW](https://mswjs.io).
 
-```tsx
+## Step 3 - Mocking GraphQL query inside test using MSW
+
+In this step you will add a library to your test that intercepts requests and returns mock results. This results in faster and more robust tests. Faster because you cut out the slowest link in this setup, the network. More robust because you get consistent API responses.
+
+First, you will install the MSW library. MSW stands for Mock Service Workers, and it allows you to intercept network calls and replace its responses with mock data.
+
+```bash
+yarn add msw --dev
+```
+
+Next, you will setup a matcher for the `GetCartById` query that returns a fixed response whenever it intercepts a GraphQL query with that name.
+
+```ts
+// ...
+const server = setupServer(
+  graphql.query("GetCartById", (req, res, ctx) => {
+    return res(
+      ctx.data({
+        cart: { totalItems: 10 },
+      })
+    );
+  })
+);
+// ...
+```
+
+Now that the page under test receives the same value for `cart.totalItems`, you will change the expected test to be `Total items: 10`.
+
+```ts
+const totalItems = await waitFor(() => screen.getByText("Total items: 10"));
+```
+
+Notice the use of the `waitFor` utility from React Testing Library. It waits for a specific condition to be met before returning the element. This means the test will wait until the mocked API result exists.
+
+This is what `index.test.tsx` looks like now:
+
+```ts
 import { render, screen, waitFor } from "@testing-library/react";
 import Home from "../pages/index";
 import { graphql } from "msw";
@@ -170,54 +257,25 @@ describe("Home", () => {
 });
 ```
 
-### Type safe query using GraphQL Codegen
+You added mocks for the GraphQL query to your test using MSW. The first step before having type safe mocks is having types, which is what you're going to do next.
 
-13. `yarn add graphql`
-14. `yarn add -D @graphql-codegen/cli`
-15. `yarn add @graphql-codegen/typescript @graphql-codegen/typescript-operations -D`
-16. `src/GetCartById.ts`
+## Step 4 - Adding types using GraphQL Codegen
 
-```ts
-const gql = String;
+Remember the annoying `// @ts-ignore` in `pages/index.tsx`? That's because `useCart` is not type safe yet. Let's fix that using GraphQL Codegen.
 
-export const getCartById = gql`
-  query GetCartById($id: ID!) {
-    cart(id: $id) {
-      totalItems
-      subTotal {
-        amount
-        formatted
-      }
-      items {
-        id
-        name
-        quantity
-        unitTotal {
-          formatted
-        }
-      }
-    }
-  }
-`;
+First, install `graphql` as a dependency.
+
+```bash
+yarn add graphql
 ```
 
-17. Replace `query` with imported `getCartById` in `pages/index.tsx`
+Then install GraphQL Codegen CLI, along with the typescript and typescript-operations plugins. These two plugins will generate typescript types based on the GraphQL operations you have, along with your GraphQL schema.
 
-```tsx
-import type { NextPage } from "next";
-import { useEffect, useState } from "react";
-import { getCartById } from "../src/GetCartById";
-
-function useCart(id: string) {
-  const [cart, setCart] = useState();
-  const query = getCartById;
-  // ...
-}
-
-// ...
+```bash
+yarn add -D @graphql-codegen/cli @graphql-codegen/typescript @graphql-codegen/typescript-operations
 ```
 
-18. `codegen.yml`
+Configure the generator by creating a file called `codegen.yml` and point it to your schema, operations and where to generate the types.
 
 ```yml
 schema: https://api.cartql.com
@@ -229,13 +287,66 @@ generates:
       - typescript-operations
 ```
 
-19. Add `"codegen": "graphql-codegen"` to `scripts` in `package.json`
-20. `yarn codegen` creates `src/types.ts`
-21. Add type to result of `useCart` inside `pages/index.tsx`: `return cart as unknown as GetCartByIdQuery["cart"];`. Remove `@ts-ignore` when accessing `cart?.totalItems`
+To finish setting up Codegen, add a new script to `package.json` called `codegen` that calls `graphql-codegen`.
 
-### Add types to mock inside test
+```json
+{
+  "scripts": {
+    "codegen": "graphql-codegen"
+  }
+}
+```
 
-22. `__tests__/index.test.tsx`
+Now run the previous command to generate `src/types.ts`
+
+```bash
+yarn codegen
+```
+
+You will see a new file called `src/types.ts` in your project, containing types based on the CartQL schema and the `GetCartById` query you have exported in `src/getCartById.ts`.
+
+Add the `getCartById` type to result of `useCart` inside `src/useCart.ts`
+
+```ts
+import { useEffect, useState } from "react";
+import { getCartById } from "./GetCartById";
+
+export function useCart(id: string) {
+  const [cart, setCart] = useState();
+
+  // ...
+
+  return cart as unknown as GetCartByIdQuery["cart"];
+}
+```
+
+Now you can finally remove `@ts-ignore` when accessing `cart?.totalItems` inside `pages/index.tsx`.
+
+```tsx
+import type { NextPage } from "next";
+import { useCart } from "../src/useCart";
+
+const Home: NextPage = () => {
+  const cart = useCart("ck5r8d5b500003f5o2aif0v2b");
+  return <div>Total items: {cart?.totalItems}</div>;
+};
+
+export default Home;
+```
+
+Thanks to GraphQL Codegen you leverage the GraphQL schema to generate types for your components, no need to manually recreate the API types in Typescript.
+
+Besides using these types in your queries, another place where you can use them is in your mocks and tests. Let's see how to add them next.
+
+## Step 5 - Adding types to the mock data
+
+Like tests, types increase your confidence in your code, so leveraging the power of both techniques is a good idea. Another benefit is a nicer development experience with mock autocompletion.
+
+The MSW library's `graphql.query` request handler can be annotated with types for the response and the variables.
+
+Import the autogenerated `GetCartByIdQuery` type and add it to the request handler inside `__tests__/index.test.tsx`. You will see validation kick in, and indicate that the response needs changes, so go ahead and modify the mock response until the type checker is happy. Even though the test was passing, the mock data needed some tweaks.
+
+This is what `index.test.tsx` should look like now:
 
 ```tsx
 import { render, screen, waitFor } from "@testing-library/react";
@@ -267,3 +378,7 @@ const server = setupServer(
 
 // ...
 ```
+
+## Conclusion
+
+In this guide, you learned how to use MSW to mock the API calls you need in your tests. Now you can be confident that your tests will pass, and your code will be type safe.
